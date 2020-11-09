@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    <script src="https://d3js.org/d3.v4.min.js"></script> 
+    <script>
+      
+        //Geo 세팅
+        var projection = d3.geoMercator()
+            .scale(1000)    //스케일
+            .rotate([-10, 1, 0]) //지도 회전
+            .center([127,37.6]); //서울 중심좌표  
+        var path = d3.geoPath().projection(projection);　
+        
+      //출력
+        var svg = d3.select("body").append("svg")
+             .attr("width", 600)
+             .attr("height", 500)
+             .style("background-color","yellow");
+        var map = svg.append("g").attr("id", "map"),
+        function render(geojson) {
+            var features = topojson.feature(data, data.objects.seoul_municipalities_geo).features;
+      map.selectAll("path")
+          .data(features)
+          .enter()
+          .append("path")
+          .attr("class", function(d) { console.log(); return "municipality c" + d.properties.code })
+          .attr("d", path);
+    
+      map.selectAll("text")
+          .data(features)
+        .enter().append("text")
+          .attr("transform", function(d) { return "translate(" + path.centroid(d) + ")"; })
+          .attr("dy", ".35em")
+          .attr("class", "municipality-label")
+          .text(function(d) { return d.properties.name; })
+    });    
+        }  
+        d3.json("seoul_municipalities_topo_simple.json",render)
+      
+             
+    </script>
+    </body>
+</html>

@@ -14,6 +14,7 @@
         #title {
             font-family: 'Sansita Swashed', cursive;
             font-size: 40px;
+            text-align: center;
         }
         #chart {
 
@@ -62,41 +63,52 @@
     <script src="http://d3js.org/topojson.v1.min.js"></script>
 
     <script>
-        var width = 800,
-        height = 600;
+      var width = 1200,
+      height = 900,
+      active = d3.select(null);
 
      
-    var svg = d3.select("#chart").append("svg")
-        .attr("width", width)
-        .attr("height", height);
-
-        var map = svg.append("g").attr("id", "map"),
-    places = svg.append("g").attr("id", "places");
 
     var projection = d3.geo.mercator()
-    .center([126.9895, 37.5651])
-    .scale(100000)
-    .translate([width/2, height/2]);
+      .center([126.9895, 37.5651])
+      .scale(100000)
+      .translate([width/2, height/2]);
+
+      var zoom = d3.behavior.zoom()
+      .translate([0, 0])
+      .scale(1)
+      .scaleExtent([1, 8])
+      .on("zoom", zoomed);
  
-var path = d3.geo.path().projection(projection);
+    var path = d3.geo.path().projection(projection);
  
-d3.json("seoul_municipalities_topo_simple.json", function(error, data) {
-  var features = topojson.feature(data, data.objects.seoul_municipalities_geo).features;
- 
-  map.selectAll("path")
-      .data(features)
-    .enter().append("path")
-      .attr("class", function(d) { console.log(); return "municipality c" + d.properties.code })
-      .attr("d", path);
- 
-  map.selectAll("text")
-      .data(features)
-    .enter().append("text")
-      .attr("transform", function(d) { return "translate(" + path.centroid(d) + ")"; })
-      .attr("dy", ".35em")
-      .attr("class", "municipality-label")
-      .text(function(d) { return d.properties.name; })
-});
+      
+    var svg = d3.select("#chart").append("svg")
+    .attr("width", width)
+    .attr("height", height)
+    .on("click",stopped, true);
+
+    var map = svg.append("g").attr("id", "map"), places = svg.append("g").attr("id", "places");
+
+    d3.json("seoul_municipalities_topo_simple.json", function(error, data) {
+      
+      var features = topojson.feature(data, data.objects.seoul_municipalities_geo).features;
+      map.selectAll("path")
+          .data(features)
+          .enter()
+          .append("path")
+          .attr("class", function(d) { console.log(); return "municipality c" + d.properties.code })
+          .attr("d", path)
+          .on("click", clicked);
+    
+      map.selectAll("text")
+          .data(features)
+        .enter().append("text")
+          .attr("transform", function(d) { return "translate(" + path.centroid(d) + ")"; })
+          .attr("dy", ".35em")
+          .attr("class", "municipality-label")
+          .text(function(d) { return d.properties.name; })
+    });
 
 d3.csv("poc2020seoulview.csv", function(data) {
     places.selectAll("circle")
@@ -109,10 +121,46 @@ d3.csv("poc2020seoulview.csv", function(data) {
     places.selectAll("text")
         .data(data)
       .enter().append("text")
-        .attr("x", function(d) { return projection([d.lon, d.lat])[0]; })
-        .attr("y", function(d) { return projection([d.lon, d.lat])[1] + 8; })
+        .attr("x", function(d) { return projection([d.lon, d.lat])[0]+10; })
+        .attr("y", function(d) { return projection([d.lon, d.lat])[1] + 3; })
         .text(function(d) { return d.name });
   });
+  function clicked(d) {
+    if (active.node() === this) return reset();
+    active.classed("active", false);
+    active = d3.select(this).classed("active", true);
+  
+    var bounds = path.bounds(d),
+        dx = bounds[1][0] - bounds[0][0],
+        dy = bounds[1][1] - bounds[0][1],
+        x = (bounds[0][0] + bounds[1][0]) / 2,
+        y = (bounds[0][1] + bounds[1][1]) / 2,
+        scale = Math.max(1, Math.min(8, 0.85 / Math.max(dx / width, dy / height))),
+        translate = [width / 2 - scale * x, height / 2 - scale * y];
+  
+    svg.transition()
+        .duration(750)
+        .call(zoom.translate(translate).scale(scale).event);
+  }
+  
+  function reset() {
+    active.classed("active", false);
+    active = d3.select(null);
+  
+    svg.transition()
+        .duration(750)
+        .call(zoom.translate([0, 0]).scale(1).event);
+  }
+  
+  function zoomed() {
+    map.style("stroke-width", 1.5 / d3.event.scale + "px");
+    map.attr("transform", "translate(" + d3.event.translate + ")scale(" + d3.event.scale + ")");
+    places.style("stroke-width", 1.5 / d3.event.scale + "px");
+    places.attr("transform", "translate(" + d3.event.translate + ")scale(" + d3.event.scale + ")");
+  }
+  function stopped() {
+    if (d3.event.defaultPrevented) d3.event.stopPropagation();
+  }
     </script>
 </body>
 </html>
