@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Welcome to POC & Seoul</title>
+    <link href="https://fonts.googleapis.com/css2?family=Quicksand&family=Sansita+Swashed:wght@800&display=swap" rel="stylesheet">
+    <!-- https://www.lucypark.kr/blog/2015/06/24/seoul-matzip-mapping/ -->
+    <style>
+        body{
+            background-color: rgb(19, 18, 18);
+            color: #fff;
+        }
+        #title {
+            font-family: 'Sansita Swashed', cursive;
+            font-size: 40px;
+        }
+        #chart {
+
+        }
+        svg circle {
+            color: #fff;
+            fill: orange;
+            opacity: .5;
+            stroke: white;
+          }
+          svg circle:hover {
+            fill: red;
+            stroke: #fff;
+          }
+          svg text {
+            pointer-events: none;
+          }
+          svg .municipality {
+            fill: #456104;
+            stroke: rgb(3, 59, 1);
+          }
+          svg .municipality-label {
+            fill: #628808;
+            font-size: 12px;
+            font-weight: 300;
+            text-anchor: middle;
+          }
+          svg #map text {
+            font-family: 'Quicksand', sans-serif;
+            color: #fff;
+            font-size: 14px;
+            text-anchor: middle;
+          }
+          svg #places text {
+            font-family: 'Quicksand', sans-serif;
+            fill: rgba(199, 196, 196, 0.74);
+            font: 9px sans-serif;
+            text-anchor: start;
+          }
+    </style>
+</head>
+<body>
+    <div id="title">Welcome to POC</div>
+    <div id="chart"></div>
+    <script src="http://d3js.org/d3.v3.min.js"></script>
+    <script src="http://d3js.org/topojson.v1.min.js"></script>
+
+    <script>
+        var width = 800,
+        height = 600;
+     
+    var svg = d3.select("#chart").append("svg")
+        .attr("width", width)
+        .attr("height", height);
+
+        var map = svg.append("g").attr("id", "map"),
+    places = svg.append("g").attr("id", "places");
+
+    var projection = d3.geo.mercator()
+    .center([126.9895, 37.5651])
+    .scale(100000)
+    .translate([width/2, height/2]);
+ 
+var path = d3.geo.path().projection(projection);
+ 
+d3.json("seoul_municipalities_topo_simple.json", function(error, data) {
+  var features = topojson.feature(data, data.objects.seoul_municipalities_geo).features;
+ 
+  map.selectAll("path")
+      .data(features)
+    .enter().append("path")
+      .attr("class", function(d) { console.log(); return "municipality c" + d.properties.code })
+      .attr("d", path);
+ 
+  map.selectAll("text")
+      .data(features)
+    .enter().append("text")
+      .attr("transform", function(d) { return "translate(" + path.centroid(d) + ")"; })
+      .attr("dy", ".35em")
+      .attr("class", "municipality-label")
+      .text(function(d) { return d.properties.name; })
+});
+
+d3.csv("poc2020seoulview.csv", function(data) {
+    places.selectAll("circle")
+        .data(data)
+      .enter().append("circle")
+        .attr("cx", function(d) { return projection([d.lon, d.lat])[0]; })
+        .attr("cy", function(d) { return projection([d.lon, d.lat])[1]; })
+        .attr("r", 10);
+   
+    places.selectAll("text")
+        .data(data)
+      .enter().append("text")
+        .attr("x", function(d) { return projection([d.lon, d.lat])[0]; })
+        .attr("y", function(d) { return projection([d.lon, d.lat])[1] + 8; })
+        .text(function(d) { return d.name });
+  });
+    </script>
+</body>
+</html>
